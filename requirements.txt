@@ -3,3 +3,4 @@ streamlit
 wikipedia
 gTTS
 requests
+duckduckgo_search
