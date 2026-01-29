@@ -9,6 +9,15 @@ import base64
 
 # --- WEB PAGE CONFIG ---
 st.set_page_config(page_title="Sam AI Assistant", page_icon="🤖")
+def get_image(query):
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.images(query, max_results=1))
+            if results:
+                return results[0]['image']
+    except Exception:
+        return None
+
 st.title("🤖 Meet Sam")
 st.markdown("I can look up facts, show pictures, and tell you the weather!")
 
@@ -25,6 +34,22 @@ def get_sam_voice_html(text):
 user_input = st.text_input("Ask Sam something (or type a city for weather):")
 
 if user_input:
+	          
+	
+	
+	
+	if "show me" in user_input.lower():
+
+
+		
+       search_query = user_input.lower().replace("show me", "").strip()
+
+        image_url = get_image(search_query)
+
+         if image_url:
+			 
+        st.image(image_url, caption=f"Here is {search_query}")
+
     # 1. Handle Weather
     if "weather" in user_input.lower():
         city = st.text_input("Which city specifically?", key="city_input")
