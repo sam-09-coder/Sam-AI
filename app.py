@@ -41,12 +41,11 @@ if user_input:
 	if "show me" in user_input.lower():
 
 
-		
-       search_query = user_input.lower().replace("show me", "").strip()
+	    search_query = user_input.lower().replace("show me", "").strip()
 
         image_url = get_image(search_query)
 
-         if image_url:
+        if image_url:
 			 
         st.image(image_url, caption=f"Here is {search_query}")
 
