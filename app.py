@@ -1,6 +1,7 @@
 import streamlit as st
 import wikipedia
 import requests
+from duckduckgo_search import DDGS
 from PIL import Image
 from io import BytesIO
 from gtts import gTTS
