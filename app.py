@@ -39,9 +39,7 @@ if user_input:
 	
 	
 	if "show me" in user_input.lower():
-
-
-	    search_query = user_input.lower().replace("show me", "").strip()
+        search_query = user_input.lower().replace("show me", "").strip()
 
         image_url = get_image(search_query)
 
@@ -49,8 +47,8 @@ if user_input:
 			 
         st.image(image_url, caption=f"Here is {search_query}")
 
-    # 1. Handle Weather
-    if "weather" in user_input.lower():
+            # 1. Handle Weather
+    elif "weather" in user_input.lower():
         city = st.text_input("Which city specifically?", key="city_input")
         if city:
             report = requests.get(f"https://wttr.in/{city}?format=3").text.strip()
