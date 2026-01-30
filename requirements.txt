@@ -1,7 +1,7 @@
 
-streamlit
 wikipedia
-gTTS
 requests
-duckduckgo_search
-pillow 
+Pillow
+gTTS
+SpeechRecognition
+PyAudio
