@@ -1,3 +1,4 @@
+
 import streamlit as st
 import wikipedia
 import requests
@@ -7,70 +8,80 @@ from io import BytesIO
 from gtts import gTTS
 import base64
 
-# --- WEB PAGE CONFIG ---
-st.set_page_config(page_title="Sam AI Assistant", page_icon="🤖")
+# --- INITIALIZE SESSION STATE (The Memory) ---
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# --- CONFIG ---
+st.set_page_config(page_title="Sam AI", page_icon="👩‍💻")
+
+# Change this to your local image file name, e.g., "sam.jpg"
+SAM_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712139.png"
+
+def get_sam_voice_html(text):
+    """Makes Sam speak"""
+    try:
+        tts = gTTS(text=text, lang='en')
+        buffered = BytesIO()
+        tts.write_to_fp(buffered)
+        audio_base64 = base64.b64encode(buffered.getvalue()).decode()
+        return f'<audio autoplay="true" src="data:audio/mp3;base64,{audio_base64}">'
+    except: return ""
+
 def get_image(query):
     try:
         with DDGS() as ddgs:
             results = list(ddgs.images(query, max_results=1))
-            if results:
-                return results[0]['image']
-    except Exception:
-        return None
+            return results[0]['image'] if results else None
+    except: return None
 
-st.title("🤖 Meet Sam")
-st.markdown("I can look up facts, show pictures, and tell you the weather!")
+# --- UI LAYOUT ---
+st.title("👩‍💻 Sam AI Assistant")
 
-# --- SAM'S VOICE FUNCTION (WEB VERSION) ---
-def get_sam_voice_html(text):
-    tts = gTTS(text=text, lang='en')
-    buffered = BytesIO()
-    tts.write_to_fp(buffered)
-    # Convert audio to a format the browser can play
-    audio_base64 = base64.b64encode(buffered.getvalue()).decode()
-    return f'<audio autoplay="true" src="data:audio/mp3;base64,{audio_base64}">'
+# Display Chat History
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar=SAM_AVATAR if message["role"] == "assistant" else None):
+        st.markdown(message["content"])
+        if "image" in message:
+            st.image(message["image"])
 
-# --- THE USER INTERFACE ---
-user_input = st.text_input("Ask Sam something (or type a city for weather):")
+# User Input Box
+if prompt := st.chat_input("Say something to Sam..."):
+    # Add user message to history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-if user_input:
-	          
-	
-	
-	
-    if "show me" in user_input.lower():
-        search_query = user_input.lower().replace("show me", "").strip()
+    # --- SAM'S BRAIN (LOGIC) ---
+    response_text = ""
+    extra_image = None
 
-        image_url = get_image(search_query)
-
-        if image_url:
-			 
-            st.image(image_url, caption=f"Here is {search_query}")
-
-            # 1. Handle Weather
-    elif "weather" in user_input.lower():
-        city = st.text_input("Which city specifically?", key="city_input")
-        if city:
-            report = requests.get(f"https://wttr.in/{city}?format=3").text.strip()
-            st.info(report)
-            st.components.v1.html(get_sam_voice_html(f"The weather in {city} is {report}"), height=0)
-
-    # 2. Handle Facts & Images
+    if "show me" in prompt.lower():
+        query = prompt.lower().replace("show me", "").strip()
+        extra_image = get_image(query)
+        response_text = f"Here is what I found for {query}."
+        
+    elif "weather" in prompt.lower():
+        city = prompt.lower().split("in")[-1].strip() if "in" in prompt.lower() else "London"
+        response_text = requests.get(f"https://wttr.in/{city}?format=3").text.strip()
+        
     else:
         try:
-            # Get Info
-            summary = wikipedia.summary(user_input, sentences=2)
-            st.success(summary)
-            
-            # Show Image
-            page = wikipedia.page(user_input)
-            if page.images:
-                img_url = page.images[0]
-                st.image(img_url, caption=f"An image of {user_input}")
-            
-            # Sam Speaks
-            st.components.v1.html(get_sam_voice_html(summary), height=0)
-            
+            response_text = wikipedia.summary(prompt, sentences=2)
         except:
-            st.error("Sam couldn't find that topic. Try being more specific!")
-		
+            response_text = "I'm listening! I can tell you about facts, weather, or show you images."
+
+    # Add Sam's response to history
+    full_response = {"role": "assistant", "content": response_text}
+    if extra_image:
+        full_response["image"] = extra_image
+    
+    st.session_state.messages.append(full_response)
+
+    # Display Sam's response
+    with st.chat_message("assistant", avatar=SAM_AVATAR):
+        st.markdown(response_text)
+        if extra_image:
+            st.image(extra_image)
+        # Trigger Voice
+        st.components.v1.html(get_sam_voice_html(response_text), height=0)
