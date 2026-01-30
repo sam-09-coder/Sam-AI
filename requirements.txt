@@ -4,3 +4,4 @@ wikipedia
 gTTS
 requests
 duckduckgo_search
+pillow 
