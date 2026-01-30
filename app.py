@@ -1,87 +1,105 @@
-
-import streamlit as st
+import tkinter as tk
+from tkinter import scrolledtext
+from PIL import Image, ImageTk
+import threading
 import wikipedia
-import requests
-from duckduckgo_search import DDGS
-from PIL import Image
-from io import BytesIO
 from gtts import gTTS
-import base64
+import os
+import speech_recognition as sr
 
-# --- INITIALIZE SESSION STATE (The Memory) ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# --- CONFIG ---
-st.set_page_config(page_title="Sam AI", page_icon="👩‍💻")
-
-# Change this to your local image file name, e.g., "sam.jpg"
-SAM_AVATAR = "https://cdn-icons-png.flaticon.com/512/4712/4712139.png"
-
-def get_sam_voice_html(text):
-    """Makes Sam speak"""
-    try:
-        tts = gTTS(text=text, lang='en')
-        buffered = BytesIO()
-        tts.write_to_fp(buffered)
-        audio_base64 = base64.b64encode(buffered.getvalue()).decode()
-        return f'<audio autoplay="true" src="data:audio/mp3;base64,{audio_base64}">'
-    except: return ""
-
-def get_image(query):
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.images(query, max_results=1))
-            return results[0]['image'] if results else None
-    except: return None
-
-# --- UI LAYOUT ---
-st.title("👩‍💻 Sam AI Assistant")
-
-# Display Chat History
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=SAM_AVATAR if message["role"] == "assistant" else None):
-        st.markdown(message["content"])
-        if "image" in message:
-            st.image(message["image"])
-
-# User Input Box
-if prompt := st.chat_input("Say something to Sam..."):
-    # Add user message to history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # --- SAM'S BRAIN (LOGIC) ---
-    response_text = ""
-    extra_image = None
-
-    if "show me" in prompt.lower():
-        query = prompt.lower().replace("show me", "").strip()
-        extra_image = get_image(query)
-        response_text = f"Here is what I found for {query}."
-        
-    elif "weather" in prompt.lower():
-        city = prompt.lower().split("in")[-1].strip() if "in" in prompt.lower() else "London"
-        response_text = requests.get(f"https://wttr.in/{city}?format=3").text.strip()
-        
-    else:
+# --- WAKE WORD & BRAIN ---
+def sam_speak(text):
+    def play():
         try:
-            response_text = wikipedia.summary(prompt, sentences=2)
-        except:
-            response_text = "I'm listening! I can tell you about facts, weather, or show you images."
+            tts = gTTS(text=text, lang='en')
+            tts.save("speech.mp3")
+            os.system("am start -a android.intent.action.VIEW -d file:///sdcard/speech.mp3 -t audio/mp3")
+        except: pass
+    threading.Thread(target=play).start()
 
-    # Add Sam's response to history
-    full_response = {"role": "assistant", "content": response_text}
-    if extra_image:
-        full_response["image"] = extra_image
+def listen_for_wake_word():
+    """Background loop that waits for 'Sam'"""
+    recognizer = sr.Recognizer()
+    while True:
+        with sr.Microphone() as source:
+            try:
+                # Adjust for noise for 0.5 seconds for better mobile accuracy
+                recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                audio = recognizer.listen(source, timeout=None, phrase_time_limit=3)
+                text = recognizer.recognize_google(audio).lower()
+                
+                if "sam" in text:
+                    # Trigger the visual 'listening' feedback
+                    root.after(0, lambda: start_sam_process("Yes? I'm listening!"))
+            except:
+                continue
+
+def start_sam_process(msg):
+    chat_display.config(state='normal')
+    chat_display.insert('end', f"\n✨ {msg}\n", "sam_style")
+    chat_display.config(state='disabled')
+    sam_speak(msg)
+
+def handle_chat():
+    query = user_entry.get()
+    if not query: return
     
-    st.session_state.messages.append(full_response)
+    chat_display.config(state='normal')
+    chat_display.insert('end', f"\n👤 You: {query}\n", "user_style")
+    
+    try:
+        search_results = wikipedia.search(query)
+        if search_results:
+            # Fixed logic: search specifically for the title
+            response = wikipedia.summary(search_results[0], sentences=2)
+        else:
+            response = "I couldn't find a specific match for that."
+    except:
+        response = "I'm having trouble connecting to my brain right now."
 
-    # Display Sam's response
-    with st.chat_message("assistant", avatar=SAM_AVATAR):
-        st.markdown(response_text)
-        if extra_image:
-            st.image(extra_image)
-        # Trigger Voice
-        st.components.v1.html(get_sam_voice_html(response_text), height=0)
+    chat_display.insert('end', f"👩‍💻 Sam: {response}\n", "sam_style")
+    chat_display.config(state='disabled')
+    chat_display.see('end')
+    
+    sam_speak(response)
+    user_entry.delete(0, 'end')
+
+# --- UI SETUP ---
+root = tk.Tk()
+root.title("Sam AI")
+root.geometry("400x650")
+root.configure(bg="#1e1e2e")
+
+# Header with Photo
+header = tk.Frame(root, bg="#27293d", pady=10)
+header.pack(fill="x")
+try:
+    img = Image.open("sam.png") 
+    img = img.resize((80, 80))
+    sam_photo = ImageTk.PhotoImage(img)
+    tk.Label(header, image=sam_photo, bg="#27293d").pack()
+except:
+    tk.Label(header, text="👩‍💻", font=("Arial", 40), bg="#27293d", fg="white").pack()
+
+# Chat Window
+chat_display = scrolledtext.ScrolledText(root, bg="#1e1e2e", fg="#cdd6f4", font=("Arial", 11), state='disabled', bd=0)
+chat_display.pack(padx=15, pady=10, fill="both", expand=True)
+chat_display.tag_config("user_style", foreground="#89b4fa", font=("Arial", 11, "bold"))
+chat_display.tag_config("sam_style", foreground="#a6e3a1")
+
+# Input Area
+input_frame = tk.Frame(root, bg="#1e1e2e", pady=15)
+input_frame.pack(fill="x")
+
+user_entry = tk.Entry(input_frame, bg="#313244", fg="white", font=("Arial", 12), bd=0)
+user_entry.pack(side="left", padx=10, fill="x", expand=True, ipady=10)
+user_entry.bind("<Return>", lambda e: handle_chat())
+
+send_btn = tk.Button(input_frame, text="Ask", command=handle_chat, bg="#89b4fa", font=("Arial", 10, "bold"), bd=0, padx=10)
+send_btn.pack(side="right", padx=10)
+
+# Start Wake Word Listening in a separate background thread
+threading.Thread(target=listen_for_wake_word, daemon=True).start()
+
+root.mainloop()
+
