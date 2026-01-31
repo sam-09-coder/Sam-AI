@@ -1,73 +1,64 @@
 
 import streamlit as st
-import wikipedia
 from gtts import gTTS
-import base64
-from io import BytesIO
-from PIL import Image
+import wikipedia
+import io
 
-# --- CONFIG ---
-st.set_page_config(page_title="Sam AI", page_icon="🤖")
+# --- MODERN GEMINI-STYLE UI ---
+st.set_page_config(page_title="SAM: Inclusive AI", page_icon="🤖")
 
-# --- SAM'S BRAIN (Search First Logic) ---
-def get_sam_response(query):
-    try:
-        # Search for the best matching page title first
-        search_results = wikipedia.search(query)
-        if search_results:
-            # Get the summary of the top search result (e.g., 'Narendra Modi')
-            return wikipedia.summary(search_results[0], sentences=2)
-        return "I couldn't find a specific match for that."
-    except wikipedia.exceptions.DisambiguationError as e:
-        return wikipedia.summary(e.options[0], sentences=2)
-    except:
-        return "I'm having trouble connecting to my brain right now."
+st.title("🤖 SAM: Hybrid Inclusive AI")
+st.markdown("---")
 
-def get_voice_html(text):
-    """Generates audio for Sam to speak"""
-    tts = gTTS(text=text, lang='en')
-    buffered = BytesIO()
-    tts.write_to_fp(buffered)
-    audio_base64 = base64.b64encode(buffered.getvalue()).decode()
-    return f'<audio autoplay="true" src="data:audio/mp3;base64,{audio_base64}">'
-
-# --- SIDEBAR (Sam's Photo) ---
-with st.sidebar:
-    st.title("Sam AI")
-    try:
-        # Tries to load your photo
-        img = Image.open("sam.png")
-        st.image(img, width=150)
-    except:
-        st.write("👤 (Add sam.png to your folder to see my face!)")
-    st.info("I'm online and ready to help!")
-
-# --- MAIN CHAT UI ---
-st.title("💬 Chat with Sam")
-
+# Initialize Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display chat history
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# Display Chat Messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# User Input
-if prompt := st.chat_input("Ask me anything..."):
-    # Show user message
+# --- INCLUSIVE FEATURES LOGIC ---
+def sam_brain(user_input):
+    user_input = user_input.lower()
+    
+    # Offline/Local Intent Mockup
+    intents = {
+        "hello": "Greetings! I am SAM, optimized for Blind, Mute, and Underprivileged support.",
+        "data science": "Data Science is the field of study that combines domain expertise, programming skills, and knowledge of mathematics and statistics to extract meaningful insights from data.",
+        "safety": "Safety protocol active. (Note: Mobile sensors like accelerometers require native app permissions not available in standard browsers)."
+    }
+    
+    if user_input in intents:
+        return intents[user_input]
+    
+    try:
+        # Online Brain (Wikipedia)
+        return wikipedia.summary(user_input, sentences=2)
+    except:
+        return "I am operating in local mode. Please ask about 'Data Science' or 'Safety'."
+
+# --- VOICE OUTPUT (For Blind/Mute Support) ---
+def speak(text):
+    tts = gTTS(text=text, lang='en')
+    audio_fp = io.BytesIO()
+    tts.write_to_fp(audio_fp)
+    return audio_fp
+
+# --- CHAT INPUT ---
+if prompt := st.chat_input("Type here to vocalize or ask Sam..."):
+    # User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Get Sam's Smart Answer
-    response = get_sam_response(prompt)
+    # Sam's Response
+    response = sam_brain(prompt)
+    st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # Show Sam's response
     with st.chat_message("assistant"):
         st.markdown(response)
-        # Make Sam speak
-        st.components.v1.html(get_voice_html(response), height=0)
-    
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
+        # Auto-play audio for the Blind/Mute
+        audio_data = speak(response)
+        st.audio(audio_data, format="audio/mp3", autoplay=True)
