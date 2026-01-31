@@ -1,6 +1,4 @@
 
-wikipedia-api
-requests
-Pillow
+streamlit
 gTTS
-SpeechRecognition
+wikipedia
