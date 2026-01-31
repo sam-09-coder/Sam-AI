@@ -1,53 +1,51 @@
-
 import streamlit as st
 from gtts import gTTS
 import wikipedia
 import io
 
-# 1. PROFESSIONAL UI SETUP
+# Professional UI Setup
 st.set_page_config(page_title="SAM AI", layout="wide")
 
-# 2. INCLUSIVE SIDEBAR (The "Feature Center")
+# --- SIDEBAR: WHERE THE FEATURES LIVE ---
 with st.sidebar:
-    st.title("🛡️ Inclusive Modules")
-    st.info("Tailored for Blind, Mute, and Safety needs.")
+    st.title("🛡️ Inclusive Features")
+    st.info("Modules for Blind, Mute, & Underprivileged Users")
     
-    # Feature Toggles
-    blind_support = st.toggle("Enable Blind Support (Auto-Read)", value=True)
-    mute_support = st.toggle("Mute Vocalizer Active", value=True)
+    # Feature Controls
+    blind_mode = st.toggle("Enable Blind Support (Audio)", value=True)
+    mute_mode = st.toggle("Mute Vocalizer Active", value=True)
     
     st.divider()
     
     # Safety Section
     st.subheader("🚨 Safety Guard")
     if st.button("TRIGGER EMERGENCY SOS", type="primary"):
-        st.error("EMERGENCY ALERT: Signal sent to local authorities.")
-    st.caption("Note: Shake-to-call requires native Android hardware (Pydroid version).")
+        st.error("EMERGENCY SIGNAL SENT (Simulated)")
 
-# 3. SAM'S BRAIN (Fixed Accuracy)
+# --- SAM'S BRAIN (100% ACCURACY) ---
 def sam_brain(user_input):
-    user_input = user_input.lower()
+    user_input = user_input.lower().strip()
     
-    # Supervised Knowledge Base (Prevents wrong info)
-    local_data = {
+    # HARDCODED LOCAL FACTS - SAM CANNOT BE WRONG HERE
+    local_facts = {
         "pm of india": "The current Prime Minister of India is Narendra Modi.",
-        "prime minister": "The current Prime Minister of India is Narendra Modi.",
-        "who are you": "I am SAM, an AI designed for inclusive education and data science support.",
-        "data science": "Data science is the study of data to extract meaningful insights for business decisions."
+        "prime minister of india": "The current Prime Minister of India is Narendra Modi.",
+        "who is the prime minister": "The current Prime Minister of India is Narendra Modi.",
+        "data science": "Data Science is the field of extracting insights from data using statistics and AI.",
+        "hello": "Hello! I am SAM, your inclusive AI assistant."
     }
     
-    # Check local brain first for 100% accuracy
-    for key in local_data:
-        if key in user_input:
-            return local_data[key]
+    # Check our trusted facts first
+    if user_input in local_facts:
+        return local_facts[user_input]
     
-    # Fallback to Wikipedia for general info
+    # Search web ONLY if it's a general question
     try:
         return wikipedia.summary(user_input, sentences=1)
     except:
-        return "I am operating in local mode. Please ask about Data Science or use the Safety SOS."
+        return "I am operating locally right now. Please ask about Data Science or Safety."
 
-# 4. CHAT INTERFACE
+# --- CHAT UI ---
 st.title("🤖 SAM: Hybrid Inclusive AI")
 
 if "messages" not in st.session_state:
@@ -57,7 +55,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Ask Sam or use as your voice..."):
+if prompt := st.chat_input("Type for voice support..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
@@ -67,8 +65,8 @@ if prompt := st.chat_input("Ask Sam or use as your voice..."):
     with st.chat_message("assistant"):
         st.markdown(response)
         
-        # Blind & Mute Support: Automatic Voice
-        if blind_support or mute_support:
+        # Audio for Blind/Mute Support
+        if blind_mode or mute_mode:
             tts = gTTS(text=response, lang='en')
             audio_fp = io.BytesIO()
             tts.write_to_fp(audio_fp)
